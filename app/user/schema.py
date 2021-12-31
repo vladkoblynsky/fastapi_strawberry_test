@@ -13,7 +13,6 @@ class Query:
     @strawberry.field
     def users(self, info: Info, limit: int = 10) -> List[UserType]:
         db: Session = info.context['db']
-        print(info.context['user'])
         users = crud.get_users(db, limit=limit)
         return users
 

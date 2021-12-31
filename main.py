@@ -1,23 +1,25 @@
-import os.path
-import pathlib
-from copy import deepcopy
-from typing import Any
+from typing import Any, List
 
 import strawberry
 from fastapi import FastAPI, Depends, Request, Response
-from fastapi.routing import APIRoute
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.responses import HTMLResponse
 from strawberry.fastapi import GraphQLRouter
+from strawberry.dataloader import DataLoader
 
 from app import models
 from app.auth.schema import Mutation as AuthMutation
+from app.dataloaders import load_users, loader
+from app.models import User
+from app.post.schema import Mutation as PostMutation
 from app.database import SessionLocal, engine
-from app.user.crud import get_user_by_email
+from app.user.crud import get_user_by_email, get_users_by_ids
+from app.post.schema import Query as PostQuery
 from app.user.schema import Query as UserQuery
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
@@ -41,7 +43,7 @@ def get_db():
 class Settings(BaseModel):
     authjwt_secret_key: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     # Configure application to store and get JWT from cookies
-    authjwt_token_location: set = {"cookies", "headers"}
+    authjwt_token_location: set = {"cookies"}
     # Disable CSRF Protection for this example. default is True
     authjwt_cookie_csrf_protect: bool = False
     # authjwt_access_cookie_key: str = 'access'
@@ -62,12 +64,12 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException):
 
 
 @strawberry.type
-class Query(UserQuery):
+class Query(UserQuery, PostQuery):
     pass
 
 
 @strawberry.type
-class Mutation(AuthMutation):
+class Mutation(AuthMutation, PostMutation):
     pass
 
 
@@ -81,7 +83,8 @@ async def get_context(request: Request, response: Response, db: Session = Depend
         "authorize": authorize,
         "request": request,
         "response": response,
-        "user": user
+        "user": user,
+        "loader": loader
     }
 
 
