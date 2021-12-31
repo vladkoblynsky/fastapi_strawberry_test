@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+
+  db:
+    image: postgres:14.1
+    container_name: fast_api_db
+    volumes:
+      - db_data:/var/lib/postgresql
+    environment:
+      - POSTGRES_DB=fast_api
+      - POSTGRES_USER=fast_api
+      - POSTGRES_PASSWORD=fast_api
+    ports:
+      - 5430:5432
+    restart: unless-stopped
+    command: ["postgres", "-c", "log_statement=all"]
+
+volumes:
+  db_data:
